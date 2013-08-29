@@ -50,6 +50,10 @@ sudo chown -R kippo:kippo /opt/kippo/
 sudo chown -R kippo:kippo /var/kippo/
 sudo chown -R kippo:kippo /var/run/kippo/
 
+# Change SSH port
+sudo sed -i 's/Port 22/Port 10001/g' /etc/ssh/sshd_config
+sudo service ssh reload
+
 # Preroute all traffic on port 22 to 222
 sudo iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
 

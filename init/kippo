@@ -1,0 +1,91 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          kippo
+# Required-Start:
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Kippo Honeypot
+# Description:       Kippo Honeypot
+#                    SSH Honeypot
+### END INIT INFO
+
+. /lib/lsb/init-functions
+
+NAME=kippo
+DAEMON=/usr/bin/twistd
+
+PIDDIR=/var/run/kippo
+PIDFILE="$PIDDIR/kippo.pid"
+CHUID=kippo
+KIPPODIR=/opt/kippo
+
+PARAMETERS="-y $KIPPODIR/kippo.tac -l /var/kippo/log/kippo.log --pidfile $PIDFILE -d $KIPPODIR"
+
+test -x $DAEMON || exit 5
+
+if [ ! -d $PIDDIR ]; then
+    mkdir $PIDDIR
+    chown $CHUID:$CHUID $PIDDIR
+fi
+
+case $1 in
+    start)
+        if [ -e $PIDFILE ]; then
+            status_of_proc -p $PIDFILE $DAEMON "$NAME" && status="0" || status="$?"
+            if [ $status = "0" ]; then
+                exit 0
+            fi
+        fi
+
+        log_daemon_msg "Starting $NAME..."
+        if start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --chuid $CHUID --exec $DAEMON -- $PARAMETERS; then
+            PID=`pidof -s p0f`
+            if [ $PID ] ; then
+                echo $PID >$PIDFILE
+            fi
+            log_end_msg 0
+        else
+            log_end_msg 1
+        fi
+    ;;
+    stop)
+        if [ -e $PIDFILE ]; then
+            status_of_proc -p $PIDFILE $DAEMON "$NAME" && status="0" || status="$?"
+            if [ "$status" = 0 ]; then
+                log_daemon_msg "Stopping $NAME..."
+                start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+                /bin/rm -rf $PIDFILE
+            fi
+        else
+            log_daemon_msg "$NAME is not running"
+            log_end_msg 0
+        fi
+    ;;
+    restart)
+        $0 stop && sleep 2 && $0 start
+    ;;
+    status)
+        if [ -e $PIDFILE ]; then
+            status_of_proc -p $PIDFILE $DAEMON "$NAME" && exit 0 || exit $?
+        else
+            log_daemon_msg "$NAME is not running"
+            log_end_msg 0
+        fi
+    ;;
+    reload)
+        if [ -e $PIDFILE ]; then
+            start-stop-daemon --stop --signal USR1 --quiet --pidfile $PIDFILE --name $NAME
+            log_success_msg "$NAME reloaded successfully"
+        else
+            log_failure_msg "$PIDFILE does not exist"
+        fi
+    ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|reload|status}"
+        exit 2
+    ;;
+esac
+
+exit 0

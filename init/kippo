@@ -40,7 +40,7 @@ case $1 in
         fi
 
         log_daemon_msg "Starting $NAME..."
-        if start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --chuid $CHUID --exec $DAEMON -- $PARAMETERS; then
+        if start-stop-daemon --chdir $KIPPODIR --start --quiet --oknodo --pidfile $PIDFILE --chuid $CHUID --exec $DAEMON -- $PARAMETERS; then
             PID=`pidof -s p0f`
             if [ $PID ] ; then
                 echo $PID >$PIDFILE

@@ -21,59 +21,70 @@ exit 0
 EOF
 }
 
+if [ "$EUID" != "0" ]; then
+    sudo "$0" $@
+    exit $?
+fi
+
 # Aptitude
 aptitude update
 
 # p0f
-sudo apt-get install -y p0f
-sudo mkdir /var/p0f/
+aptitude install -y p0f
+mkdir /var/p0f/
 
 #
 # Kippo
-sudo apt-get install -y subversion python-dev openssl python-openssl python-pyasn1 python-twisted iptables
+aptitude install -y subversion python-dev openssl python-openssl python-pyasn1 python-twisted iptables
 
-sudo mkdir /opt/kippo/
-sudo svn checkout http://kippo.googlecode.com/svn/trunk/ /opt/kippo/
+mkdir /opt/kippo/
+svn checkout http://kippo.googlecode.com/svn/trunk/ /opt/kippo/
 
-sudo wget https://raw.github.com/Pmaene/HoneyPot/master/config/kippo.cfg -O /opt/kippo/kippo.cfg
+wget https://raw.github.com/Pmaene/HoneyPot/master/config/kippo.cfg -O /opt/kippo/kippo.cfg
 
-sudo useradd -r -s /bin/false kippo
+useradd -r -s /bin/false kippo
 
-sudo mkdir -p /var/kippo/dl
-sudo mkdir -p /var/kippo/log/tty
-sudo mkdir -p /var/run/kippo
+mkdir -p /var/kippo/dl
+mkdir -p /var/kippo/log/tty
+mkdir -p /var/run/kippo
 
-sudo rm -rf /opt/kippo/dl
-sudo rm -rf /opt/kippo/log
+rm -rf /opt/kippo/dl
+rm -rf /opt/kippo/log
 
-sudo chown -R kippo:kippo /opt/kippo/
-sudo chown -R kippo:kippo /var/kippo/
-sudo chown -R kippo:kippo /var/run/kippo/
+chown -R kippo:kippo /opt/kippo/
+chown -R kippo:kippo /var/kippo/
+chown -R kippo:kippo /var/run/kippo/
 
 # Change SSH port
-sudo sed -i 's/Port 22/Port 10001/g' /etc/ssh/sshd_config
-sudo service ssh reload
+sed -i 's/Port 22/Port 10001/g' /etc/ssh/sshd_config
+service ssh reload
+
+# Flushing existing IPTables configuration
+iptables -F
+iptables -X
+iptables -t nat -F
+iptables -t nat -X
 
 # Preroute all traffic on port 22 to 222
-sudo iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
+iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
 
 # Persist iptables config
-sudo iptables-save > /etc/iptables.rules
+iptables-save > /etc/iptables.rules
 
-sudo generateRestoreScript > /etc/network/if-up.d/iptables
-sudo chmod +x /etc/network/if-up.d/iptables
+generateRestoreScript > /etc/network/if-up.d/iptables
+chmod +x /etc/network/if-up.d/iptables
 
 # Retrieve init scripts
-sudo wget https://raw.github.com/Pmaene/HoneyPot/master/init/p0f -O /etc/init.d/p0f
-sudo wget https://raw.github.com/Pmaene/HoneyPot/master/init/kippo -O /etc/init.d/kippo
+wget https://raw.github.com/Pmaene/HoneyPot/master/init/p0f -O /etc/init.d/p0f
+wget https://raw.github.com/Pmaene/HoneyPot/master/init/kippo -O /etc/init.d/kippo
 
 # Install system services
-sudo chmod +x /etc/init.d/p0f
-sudo chmod +x /etc/init.d/kippo
+chmod +x /etc/init.d/p0f
+chmod +x /etc/init.d/kippo
 
-sudo update-rc.d p0f defaults
-sudo update-rc.d kippo defaults
+update-rc.d p0f defaults
+update-rc.d kippo defaults
 
 # Start the honeypot software
-sudo service p0f start
-sudo service kippo start
+service p0f start
+service kippo start
